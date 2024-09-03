@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>凸包の探索（グラハムスキャン）</title>
+    <script src="js/Point.js"></script>
+    <script src="js/Edge.js"></script>
+</head>
+<style>
+    .canvas {
+        border: 1px solid black;
+    }
+
+    .container {
+        display: flex;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <canvas id="canvas" class="canvas" width="640" height="480"></canvas>
+    </div>
+    <div id="control"></div>
+    <button id="reset">点群の消去</button>
+    </div>
+</body>
+<script>
+    let canvas = document.getElementById("canvas");
+    let draw = document.getElementById("draw");
+    let reset = document.getElementById("reset");
+    let ctx = canvas.getContext("2d");
+    let points = [];
+    let currentDragging = null;
+
+    class DraggablePoint {
+        constructor(p) {
+            this.p = p;
+            this.r = 12;
+            this.isDragging = false;
+        }
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+        if (e.button == 2) return;
+
+        for (let i = 0; i < points.length; i++) {
+            if (Math.sqrt(
+                (event.offsetX - points[i].p.x) ** 2
+                + (event.offsetY - points[i].p.y) ** 2
+            ) <= points[i].r) {
+                points[i].isDragging = true;
+                currentDragging = points[i];
+                return;
+            }
+        }
+    })
+
+
+    canvas.addEventListener("mousemove", (e) => {
+        if (currentDragging && currentDragging.isDragging) {
+            currentDragging.p.x = e.offsetX;
+            currentDragging.p.y = e.offsetY;
+
+            graham_scan(points);
+
+            drawPoint(currentDragging.p, "red", 6);
+        }
+    })
+
+    canvas.addEventListener("mouseup", (e) => {
+        if (e.button == 2) return;
+
+        if (currentDragging && currentDragging.isDragging) {
+            currentDragging.p.x = e.offsetX;
+            currentDragging.p.y = e.offsetY;
+            currentDragging.isDragging = false;
+            currentDragging == null;
+
+        } else {
+            points.push(new DraggablePoint(new Point(event.offsetX, event.offsetY)));
+        }
+
+        graham_scan(points);
+    })
+
+    canvas.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        for (let i = 0; i < points.length; i++) {
+            if (Math.sqrt(
+                (event.offsetX - points[i].p.x) ** 2
+                + (event.offsetY - points[i].p.y) ** 2
+            ) <= points[i].r) {
+                points.splice(i, 1);
+                graham_scan(points);
+                return;
+            }
+        }
+    })
+
+    reset.addEventListener("click", () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        points = [];
+    });
+
+    function drawPoint(point, color = "black", size = 3) {
+        ctx.fillStyle = color;
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, size, 0, Math.PI * 2, false);
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawEdge(edge, color = "black", size = 1) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = size;
+        ctx.moveTo(edge.p1.x, edge.p1.y);
+        ctx.lineTo(edge.p2.x, edge.p2.y);
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    function graham_scan(dPoints) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const points = [];
+
+        for (let i = 0; i < dPoints.length; i++) {
+            points.push(new Point(dPoints[i].p.x, dPoints[i].p.y));
+        }
+
+        for (let i = 0; i < points.length; i++) {
+            drawPoint(points[i]);
+        }
+
+        if (points.length < 3) return;
+
+        // y座標が最大（最も下にある点、canvasは下向き正なので最大値）の点を基準点 p0 とする
+        points.sort((a, b) => {
+            if (a.y == b.y) {
+                return a.x - b.x;
+            } else {
+                return -1 * (a.y - b.y);
+            }
+        });
+        const p0 = points[0];
+
+        // 点を極角でソートする
+        Point.polarAngleSort(points, p0);
+
+        const stack = [];
+
+        // スタックに最初の3点をプッシュ
+        stack.push(points[0]);
+        stack.push(points[1]);
+        stack.push(points[2]);
+
+        for (let i = 3; i < points.length; i++) {
+            while (stack.length > 1
+                && new Edge(stack[stack.length - 2], stack[stack.length - 1]).isCounterclockwiseTo(
+                    new Edge(stack[stack.length - 1], points[i])) > 0) {
+                stack.pop();
+            }
+            stack.push(points[i]);
+        }
+
+        for (let i = 1; i < stack.length; i++) {
+            drawEdge(new Edge(stack[i], stack[i - 1]));
+        }
+        drawEdge(new Edge(stack[0], stack[stack.length - 1]));
+    }
+</script>
+
+</html>

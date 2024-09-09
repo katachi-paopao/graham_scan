@@ -14,6 +14,13 @@ class Edge {
         }
     }
 
+    static createEdge(px, py, qx, qy) {
+        let args = [px, py, qx, qy];
+
+        if (!args.every(Number.isFinite)) return;
+        return new Edge(new Point(px, py), new Point(qx, qy));
+    }
+
     setPoints(p1, p2) {
         this.p1 = p1;
         this.p2 = p2;

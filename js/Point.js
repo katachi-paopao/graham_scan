@@ -12,6 +12,17 @@ class Point {
         return (p.x - this.x)**2 + (p.y - this.y)**2;
     }
 
+    intDivision(p = new Point(0, 0), m, n){// 点pとm:nに内分する点を計算
+        if (m + n == 0) {
+            throw new Error("m + n が 0 になるため内分点を計算できません。");
+        }
+
+        const x = (n * this.x + m * p.x) / (m + n);
+        const y = (n * this.y + m * p.y) / (m + n);
+
+        return new Point(x, y);
+    }
+
     static middle(p1, p2) {// 点p1と点p2の中点を計算
         return new Point( (p1.x + p2.x) / 2, (p1.y + p2.y) / 2);
     }
